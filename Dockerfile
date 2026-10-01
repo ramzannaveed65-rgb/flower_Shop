@@ -9,7 +9,8 @@ FROM php:8.2-apache
 
 # MySQL driver, Apache modules, PHP limits, Apache listens on Railway's $PORT
 RUN docker-php-ext-install pdo_mysql \
- && a2enmod rewrite headers setenvif \
+ && (a2dismod mpm_event mpm_worker || true) \
+ && a2enmod mpm_prefork rewrite headers setenvif \
  && { echo 'upload_max_filesize = 8M'; \
       echo 'post_max_size = 10M'; \
       echo 'date.timezone = Asia/Karachi'; \
