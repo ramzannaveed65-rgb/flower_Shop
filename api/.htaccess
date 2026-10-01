@@ -1,0 +1,3 @@
+# Some Apache setups drop the Authorization header before PHP sees it.
+# This line passes it through so login tokens work.
+SetEnvIf Authorization "(.*)" HTTP_AUTHORIZATION=$1

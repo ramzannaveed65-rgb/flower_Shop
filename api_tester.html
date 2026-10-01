@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Flower Shop API Tester</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: Segoe UI, Arial, sans-serif; background: #f4f5f7; margin: 0; padding: 16px; color: #222; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  .note { color: #666; font-size: 13px; margin: 0 0 16px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; max-width: 1200px; }
+  @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+  .card { background: #fff; border-radius: 8px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+  .card h2 { font-size: 16px; margin: 0 0 12px; }
+  label { display: block; font-size: 13px; margin: 8px 0 3px; color: #555; }
+  input { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 5px; font-size: 14px; }
+  .row { display: flex; gap: 8px; }
+  .row > * { flex: 1; }
+  button { background: #c2185b; color: #fff; border: 0; padding: 8px 14px; border-radius: 5px; cursor: pointer; font-size: 14px; margin-top: 10px; }
+  button:hover { background: #a0144b; }
+  button.grey { background: #607d8b; }
+  button.small { padding: 4px 10px; margin: 0; font-size: 13px; }
+  #status { padding: 10px 12px; border-radius: 6px; margin-bottom: 16px; max-width: 1200px; font-size: 14px; background: #fff3cd; }
+  #status.in { background: #d4edda; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  td, th { text-align: left; padding: 6px 4px; border-bottom: 1px solid #eee; }
+  pre { background: #1e1e1e; color: #9cdcfe; padding: 12px; border-radius: 6px; font-size: 12px; overflow: auto; max-height: 420px; margin: 0; white-space: pre-wrap; word-break: break-all; }
+  .ok { color: #2e7d32; font-weight: 600; }
+  .err { color: #c62828; font-weight: 600; }
+  .total { font-weight: 600; text-align: right; margin-top: 8px; }
+  select, textarea { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 5px; font-size: 14px; font-family: inherit; }
+  .pill { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 12px; background: #eee; }
+  .pill.pending, .pill.unpaid { background: #fff3cd; }
+  .pill.submitted { background: #d1ecf1; }
+  .pill.verified, .pill.delivered, .pill.confirmed { background: #d4edda; }
+  .pill.rejected, .pill.cancelled { background: #f8d7da; }
+  .payinfo { background: #fce4ec; border-radius: 6px; padding: 10px; margin-top: 10px; font-size: 14px; }
+</style>
+</head>
+<body>
+
+<h1>🌸 Flower Shop API Tester</h1>
+<p class="note">Test page for the PHP API. Only for development — delete it before putting the site online.</p>
+
+<div id="status">Not logged in</div>
+
+<div class="grid">
+
+  <!-- Register -->
+  <div class="card">
+    <h2>1. Register</h2>
+    <div class="row">
+      <div><label>Name</label><input id="r_name" value="Ali Khan"></div>
+      <div><label>Mobile</label><input id="r_phone" value="03001234567"></div>
+    </div>
+    <div class="row">
+      <div><label>Password</label><input id="r_pass" value="secret123"></div>
+      <div><label>City</label><input id="r_city" value="Multan"></div>
+    </div>
+    <button onclick="register()">Register</button>
+  </div>
+
+  <!-- Login -->
+  <div class="card">
+    <h2>2. Login</h2>
+    <div class="row">
+      <div><label>Mobile</label><input id="l_phone" value="03001234567"></div>
+      <div><label>Password</label><input id="l_pass" value="secret123"></div>
+    </div>
+    <button onclick="login()">Login</button>
+    <button class="grey" onclick="logout()">Logout</button>
+  </div>
+
+  <!-- Flowers -->
+  <div class="card">
+    <h2>3. Flowers <button class="small grey" onclick="loadFlowers()">Reload</button></h2>
+    <table id="flowers"><tr><td>Loading…</td></tr></table>
+  </div>
+
+  <!-- Cart -->
+  <div class="card">
+    <h2>4. My Cart <button class="small grey" onclick="loadCart()">Reload</button>
+        <button class="small grey" onclick="cart({action:'clear'})">Empty cart</button></h2>
+    <table id="cart"><tr><td>Log in to see your cart</td></tr></table>
+    <div class="total" id="cart_total"></div>
+  </div>
+
+  <!-- Checkout -->
+  <div class="card">
+    <h2>5. Checkout</h2>
+    <div class="row">
+      <div><label>Receiver name</label><input id="c_name" value="Sara Ahmed"></div>
+      <div><label>Receiver mobile</label><input id="c_phone" value="03111234567"></div>
+    </div>
+    <label>Address</label><input id="c_address" value="House 12, Street 4, Gulgasht Colony">
+    <div class="row">
+      <div><label>City</label><input id="c_city" value="Multan"></div>
+      <div><label>Delivery</label>
+        <select id="c_type" onchange="document.getElementById('c_date').disabled = this.value === 'same_day'">
+          <option value="standard">Standard (Rs 150)</option>
+          <option value="same_day">Same day (Rs 350)</option>
+        </select></div>
+      <div><label>Date (standard)</label><input id="c_date" type="date"></div>
+    </div>
+    <div class="row">
+      <div><label>Gift message (optional)</label><input id="c_gift" value="Happy Birthday!"></div>
+      <div><label>Payment</label>
+        <select id="c_pay">
+          <option value="cod">Cash on Delivery</option>
+          <option value="nayapay">NayaPay (advance)</option>
+          <option value="easypaisa">Easypaisa (advance)</option>
+        </select></div>
+    </div>
+    <button onclick="checkout('cart')">Place order from cart</button>
+    <p class="note" style="margin:8px 0 0">"Buy Now" buttons in the Flowers list also use these details.</p>
+    <div id="order_result"></div>
+  </div>
+
+  <!-- Payment proof -->
+  <div class="card">
+    <h2>6. Submit NayaPay / Easypaisa payment</h2>
+    <div class="row">
+      <div><label>Order ID</label><input id="p_order" placeholder="filled after placing an order"></div>
+      <div><label>Transaction ID (TID)</label><input id="p_tid" value="01234567890"></div>
+    </div>
+    <div class="row">
+      <div><label>Sender number (optional)</label><input id="p_sender" value="03001234567"></div>
+      <div><label>Screenshot</label><input id="p_file" type="file" accept="image/*"></div>
+    </div>
+    <button onclick="submitPayment()">Submit payment</button>
+  </div>
+
+  <!-- My orders -->
+  <div class="card" style="grid-column: 1 / -1">
+    <h2>7. My Orders <button class="small grey" onclick="loadOrders()">Reload</button></h2>
+    <table id="orders"><tr><td>Log in to see your orders</td></tr></table>
+  </div>
+
+</div>
+
+<div class="card" style="max-width:1200px; margin-top:16px">
+  <h2>Last API answer <span id="last_info"></span></h2>
+  <pre id="output">Click any button above…</pre>
+</div>
+
+<script>
+// Relative path: works because this page is inside the flower_shop folder
+const API = 'api/';
+let token = null;
+try { token = localStorage.getItem('fs_token'); } catch (e) {}
+
+// Send a request to the API and show the answer at the bottom
+async function call(file, method = 'GET', body = null) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = 'Bearer ' + token;
+
+  let res, data;
+  try {
+    res  = await fetch(API + file, { method, headers, body: body ? JSON.stringify(body) : null });
+    const text = await res.text();
+    try { data = JSON.parse(text); }
+    catch (e) { data = { success: false, message: 'Not JSON (PHP error?)', raw: text }; }
+  } catch (e) {
+    data = { success: false, message: 'Could not reach the API. Is Apache running?' };
+    res  = { status: 0 };
+  }
+
+  document.getElementById('output').textContent = JSON.stringify(data, null, 2);
+  document.getElementById('last_info').innerHTML =
+    `— ${method} ${file} <span class="${data.success ? 'ok' : 'err'}">[HTTP ${res.status}]</span>`;
+  return data;
+}
+
+function setToken(t, customer) {
+  token = t;
+  try { t ? localStorage.setItem('fs_token', t) : localStorage.removeItem('fs_token'); } catch (e) {}
+  const s = document.getElementById('status');
+  if (t) {
+    s.className = 'in';
+    s.textContent = customer ? `Logged in as ${customer.name} (${customer.phone})` : 'Logged in';
+  } else {
+    s.className = '';
+    s.textContent = 'Not logged in';
+  }
+}
+
+const val = id => document.getElementById(id).value;
+
+async function register() {
+  const d = await call('register.php', 'POST', {
+    name: val('r_name'), phone: val('r_phone'), password: val('r_pass'), city: val('r_city')
+  });
+  if (d.success) { setToken(d.token, d.customer); loadCart(); loadOrders(); }
+}
+
+async function login() {
+  const d = await call('login.php', 'POST', { phone: val('l_phone'), password: val('l_pass') });
+  if (d.success) { setToken(d.token, d.customer); loadCart(); loadOrders(); }
+}
+
+function logout() {
+  setToken(null);
+  document.getElementById('cart').innerHTML = '<tr><td>Log in to see your cart</td></tr>';
+  document.getElementById('cart_total').textContent = '';
+  document.getElementById('orders').innerHTML = '<tr><td>Log in to see your orders</td></tr>';
+}
+
+async function loadFlowers() {
+  const d = await call('flowers.php');
+  const t = document.getElementById('flowers');
+  if (!d.success) { t.innerHTML = `<tr><td class="err">${d.message}</td></tr>`; return; }
+  t.innerHTML = '<tr><th>Flower</th><th>Price</th><th>Stock</th><th></th></tr>' +
+    d.flowers.map(f => `
+      <tr>
+        <td>${f.name}<br><small style="color:#888">${f.category_name ?? ''}</small></td>
+        <td>Rs ${f.price}</td>
+        <td>${f.stock}</td>
+        <td style="white-space:nowrap">
+          <button class="small" onclick="cart({action:'add', flower_id:${f.id}, quantity:1})">Add to Cart</button>
+          <button class="small grey" onclick="checkout('buy_now', ${f.id})">Buy Now</button>
+        </td>
+      </tr>`).join('');
+}
+
+async function loadCart() {
+  if (!token) return;
+  showCart(await call('cart.php'));
+}
+
+async function cart(body) {
+  if (!token) { alert('Please register or log in first'); return; }
+  showCart(await call('cart.php', 'POST', body));
+}
+
+function showCart(d) {
+  const t = document.getElementById('cart');
+  const total = document.getElementById('cart_total');
+  if (!d.success) {
+    if (d.message && d.message.includes('log in')) setToken(null);
+    return;   // error is shown in "Last API answer"
+  }
+  const items = d.cart.items;
+  if (!items.length) { t.innerHTML = '<tr><td>Cart is empty</td></tr>'; total.textContent = ''; return; }
+  t.innerHTML = '<tr><th>Flower</th><th>Qty</th><th>Total</th><th></th></tr>' +
+    items.map(i => `
+      <tr>
+        <td>${i.flower.name}</td>
+        <td>
+          <button class="small grey" onclick="cart({action:'update', flower_id:${i.flower.id}, quantity:${i.quantity - 1}})">−</button>
+          ${i.quantity}
+          <button class="small grey" onclick="cart({action:'update', flower_id:${i.flower.id}, quantity:${i.quantity + 1}})">+</button>
+        </td>
+        <td>Rs ${i.line_total}</td>
+        <td><button class="small" onclick="cart({action:'remove', flower_id:${i.flower.id}})">Remove</button></td>
+      </tr>`).join('');
+  total.textContent = `${d.cart.total_items} items — Subtotal: Rs ${d.cart.subtotal}`;
+}
+
+// ----- Checkout (from cart, or Buy Now for one flower) -----
+async function checkout(source, flowerId = null) {
+  if (!token) { alert('Please register or log in first'); return; }
+  const body = {
+    source,
+    receiver_name: val('c_name'), receiver_phone: val('c_phone'),
+    address: val('c_address'), city: val('c_city'),
+    delivery_type: val('c_type'), gift_message: val('c_gift'),
+    payment_method: val('c_pay'),
+  };
+  if (val('c_type') === 'standard' && val('c_date')) body.delivery_date = val('c_date');
+  if (source === 'buy_now') { body.flower_id = flowerId; body.quantity = 1; }
+
+  const d = await call('place_order.php', 'POST', body);
+  const box = document.getElementById('order_result');
+  if (!d.success) { box.innerHTML = `<div class="payinfo err">${d.message}</div>`; return; }
+
+  const o = d.order;
+  let html = `<div class="payinfo"><b class="ok">✔ Order ${o.order_number} placed</b><br>
+    Total: Rs ${o.total} (flowers ${o.subtotal} + delivery ${o.delivery_charge})<br>
+    Delivery: ${o.delivery_type.replace('_', ' ')} on ${o.delivery_date}<br>`;
+  if (d.payment_instructions) {
+    const p = d.payment_instructions;
+    html += `<b>Send Rs ${p.amount} to ${p.method === 'nayapay' ? 'NayaPay' : 'Easypaisa'}: ${p.number} (${p.title})</b><br>
+             Then submit the payment in box 6.`;
+    document.getElementById('p_order').value = o.id;
+  } else {
+    html += d.next_step;
+  }
+  box.innerHTML = html + '</div>';
+  loadCart(); loadFlowers(); loadOrders();
+}
+
+// ----- Payment proof (multipart form, because of the screenshot) -----
+async function submitPayment() {
+  if (!token) { alert('Please register or log in first'); return; }
+  const form = new FormData();
+  form.append('order_id', val('p_order'));
+  form.append('transaction_id', val('p_tid'));
+  form.append('sender_number', val('p_sender'));
+  const file = document.getElementById('p_file').files[0];
+  if (file) form.append('screenshot', file);
+
+  let res, data;
+  try {
+    // No Content-Type header here: the browser sets it for file uploads
+    res = await fetch(API + 'submit_payment.php', {
+      method: 'POST', headers: { 'Authorization': 'Bearer ' + token }, body: form
+    });
+    const text = await res.text();
+    try { data = JSON.parse(text); } catch (e) { data = { success: false, message: 'Not JSON (PHP error?)', raw: text }; }
+  } catch (e) { data = { success: false, message: 'Could not reach the API' }; res = { status: 0 }; }
+
+  document.getElementById('output').textContent = JSON.stringify(data, null, 2);
+  document.getElementById('last_info').innerHTML =
+    `— POST submit_payment.php <span class="${data.success ? 'ok' : 'err'}">[HTTP ${res.status}]</span>`;
+  if (data.success) loadOrders();
+}
+
+// ----- My orders -----
+async function loadOrders() {
+  if (!token) return;
+  const d = await call('my_orders.php');
+  const t = document.getElementById('orders');
+  if (!d.success) return;
+  if (!d.orders.length) { t.innerHTML = '<tr><td>No orders yet</td></tr>'; return; }
+  t.innerHTML = '<tr><th>ID</th><th>Order</th><th>Items</th><th>Delivery</th><th>Total</th><th>Payment</th><th>Status</th></tr>' +
+    d.orders.map(o => `
+      <tr>
+        <td>${o.id}</td>
+        <td>${o.order_number}<br><small style="color:#888">${o.created_at}</small></td>
+        <td>${o.items.map(i => `${i.quantity} × ${i.name}`).join('<br>')}</td>
+        <td>${o.delivery_type.replace('_', ' ')}<br>${o.delivery_date}</td>
+        <td>Rs ${o.total}</td>
+        <td>${o.payment_method.toUpperCase()}<br><span class="pill ${o.payment_status}">${o.payment_status}</span></td>
+        <td><span class="pill ${o.order_status}">${o.order_status}</span></td>
+      </tr>`).join('');
+}
+
+// Start
+// Tomorrow in local (Pakistan) time as YYYY-MM-DD
+const tmr = new Date(); tmr.setDate(tmr.getDate() + 1);
+document.getElementById('c_date').value =
+  `${tmr.getFullYear()}-${String(tmr.getMonth() + 1).padStart(2, '0')}-${String(tmr.getDate()).padStart(2, '0')}`;
+if (token) { setToken(token); loadCart(); loadOrders(); }
+loadFlowers();
+</script>
+</body>
+</html>
