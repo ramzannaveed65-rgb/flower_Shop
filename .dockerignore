@@ -1,0 +1,10 @@
+# Not needed (or must not be public) on the server
+.git
+.gitignore
+.gitattributes
+.vscode
+api_tester.html
+database/update_*.sql
+uploads/payments/*
+*.zip
+*.log

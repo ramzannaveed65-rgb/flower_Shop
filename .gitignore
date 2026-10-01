@@ -1,0 +1,7 @@
+# Customer payment screenshots stay private (never put them on GitHub)
+uploads/payments/*
+!uploads/payments/.keep
+
+*.zip
+*.log
+.vscode/

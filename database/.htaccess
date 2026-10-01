@@ -1,0 +1,3 @@
+# The SQL files contain the admin password hash and customer data:
+# never let anyone download them from the website
+Require all denied
