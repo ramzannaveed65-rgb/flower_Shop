@@ -213,7 +213,12 @@ INSERT INTO settings (setting_key, setting_value) VALUES
   ('standard_delivery_charge', '150'),
   ('same_day_delivery_charge', '350'),
   ('same_day_cutoff_time', '14:00'),          -- same-day only if ordered before 2 PM
-  ('same_day_cities',      'Multan'),          -- comma separated
+  ('delivery_cities',      'Islamabad, Rawalpindi'),  -- customers can only order to these cities
+  ('same_day_cities',      'Islamabad, Rawalpindi'),  -- comma separated, must be delivery cities
+  ('google_review_url',    ''),                -- link for the Rate us on Google button
+  ('whatsapp_alerts_enabled', '0'),            -- send new orders to the shop's WhatsApp
+  ('whatsapp_alert_phone', ''),
+  ('whatsapp_alert_apikey', ''),
   ('cod_enabled',          '1'),
   ('nayapay_number',       '03XX-XXXXXXX'),    -- NayaPay number or ID, replace with shop's
   ('nayapay_title',        'Account Title'),

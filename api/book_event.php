@@ -104,7 +104,13 @@ try {
 $stmt = $pdo->prepare("SELECT * FROM event_bookings WHERE id = ?");
 $stmt->execute([$id]);
 
-respond([
+$booking  = format_booking($stmt->fetch());
+$settings = get_settings($pdo);
+
+// Answer the app first, then send the WhatsApp alert to the shop
+respond_then([
     'message' => 'Booking request sent. The shop will call you to confirm the details and price.',
-    'booking' => format_booking($stmt->fetch()),
-], 201);
+    'booking' => $booking,
+], 201, function () use ($pdo, $settings, $booking) {
+    whatsapp_alert($pdo, $settings, booking_alert_text($booking, $settings['shop_name'] ?? 'Flower Shop'));
+});

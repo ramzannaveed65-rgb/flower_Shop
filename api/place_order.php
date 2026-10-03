@@ -13,7 +13,7 @@
 //   "receiver_name":  "Sara",
 //   "receiver_phone": "03111234567",
 //   "address":        "House 12, Street 4, Gulgasht Colony",
-//   "city":           "Multan",
+//   "city":           "Islamabad",        // must be one of the delivery cities
 //   "delivery_type":  "standard",      // "standard" or "same_day"
 //   "delivery_date":  "2026-10-02",    // optional: same_day = today, standard = tomorrow
 //   "gift_message":   "Happy Birthday!",   // optional
@@ -21,6 +21,7 @@
 // }
 //
 // Rules:
+//  - city:     only the delivery cities from Admin -> Settings
 //  - same_day: only in same-day cities, only before the cutoff time,
 //              and every flower must allow same-day delivery
 //  - standard: delivery from tomorrow up to 30 days ahead
@@ -49,13 +50,29 @@ $payment_method = $in['payment_method'] ?? '';
 if (mb_strlen($receiver_name) < 3)                  fail('Enter the receiver\'s name');
 if (!preg_match('/^03\d{9}$/', $receiver_phone))    fail('Enter a valid receiver mobile number, e.g. 03001234567');
 if (mb_strlen($address) < 10)                       fail('Enter the full delivery address');
-if ($city === '')                                   fail('Enter the city');
+if ($city === '')                                   fail('Choose the city');
 if (mb_strlen($gift_message) > 255)                 fail('Gift message is too long (max 255 characters)');
 if (!in_array($delivery_type, ['standard', 'same_day'], true)) fail('delivery_type must be standard or same_day');
 if (!in_array($payment_method, ['cod', 'nayapay', 'easypaisa'], true)) fail('Choose a payment method: cod, nayapay or easypaisa');
 
 if ($payment_method === 'cod' && ($settings['cod_enabled'] ?? '1') !== '1') {
     fail('Cash on Delivery is not available right now. Please pay with NayaPay or Easypaisa');
+}
+
+// Delivery area: only the cities set in Admin -> Settings
+$allowed = delivery_cities($settings);
+$match   = null;
+foreach ($allowed as $c) {
+    if (mb_strtolower($c) === mb_strtolower($city)) {
+        $match = $c;
+        break;
+    }
+}
+if ($allowed && $match === null) {
+    fail('Sorry, we only deliver in ' . implode(' / ', $allowed) . ' right now');
+}
+if ($match !== null) {
+    $city = $match;       // save the city exactly as written in the settings
 }
 
 // ----------------------------------------------------
@@ -210,4 +227,8 @@ if ($payment_method === 'cod') {
         . 'then submit the Transaction ID and screenshot.';
 }
 
-respond($data, 201);
+// Answer the app first, then send the WhatsApp alert to the shop
+respond_then($data, 201, function () use ($pdo, $settings, $order, $customer) {
+    whatsapp_alert($pdo, $settings,
+        order_alert_text($order, $customer, $settings['shop_name'] ?? 'Flower Shop'));
+});

@@ -5,6 +5,7 @@
 // =====================================================
 
 require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../config/notify.php';
 
 // Every API answer is JSON
 header('Content-Type: application/json; charset=utf-8');
@@ -22,6 +23,36 @@ function respond(array $data = [], int $code = 200): void
 {
     http_response_code($code);
     echo json_encode(['success' => true] + $data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    exit;
+}
+
+// Send a successful answer to the app FIRST, then do slow extra work
+// (like the WhatsApp alert) so the customer does not have to wait for it.
+function respond_then(array $data, int $code, callable $after): void
+{
+    $json = json_encode(['success' => true] + $data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+    ignore_user_abort(true);
+    http_response_code($code);
+    if (function_exists('apache_setenv')) {
+        @apache_setenv('no-gzip', '1');
+    }
+    header('Content-Length: ' . strlen($json));
+    header('Connection: close');
+    echo $json;
+    while (ob_get_level() > 0) {
+        ob_end_flush();
+    }
+    flush();
+    if (function_exists('fastcgi_finish_request')) {
+        fastcgi_finish_request();
+    }
+
+    try {
+        $after();
+    } catch (Throwable $e) {
+        error_log('After-response work failed: ' . $e->getMessage());
+    }
     exit;
 }
 

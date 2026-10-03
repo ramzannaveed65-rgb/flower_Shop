@@ -1,6 +1,6 @@
 <?php
 // =====================================================
-// admin/flowers.php - Flower list: show/hide, delete, quick stock view
+// admin/flowers.php - Flower list: show/hide, delete, quick stock change
 // =====================================================
 
 require __DIR__ . '/_init.php';
@@ -14,6 +14,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'toggle') {
         $pdo->prepare("UPDATE flowers SET is_active = 1 - is_active WHERE id = ?")->execute([$fid]);
         flash('Flower updated.');
+    } elseif ($action === 'stock') {
+        // Quick stock change from the list: 0 = out of stock
+        $stock = max(0, min(100000, (int) ($_POST['stock'] ?? 0)));
+        $pdo->prepare("UPDATE flowers SET stock = ? WHERE id = ?")->execute([$stock, $fid]);
+        flash($stock === 0 ? 'Marked as out of stock.' : "Stock set to $stock.");
     } elseif ($action === 'delete') {
         $stmt = $pdo->prepare("SELECT COUNT(*) FROM order_items WHERE flower_id = ?");
         $stmt->execute([$fid]);
@@ -104,9 +109,16 @@ require __DIR__ . '/_header.php';
           <td><?= e($f['category_name'] ?? '—') ?></td>
           <td><?= rs($f['price']) ?></td>
           <td>
-            <?php if ((int) $f['stock'] === 0): ?><span class="badge text-bg-danger">Out of stock</span>
-            <?php elseif ((int) $f['stock'] <= 3): ?><span class="badge text-bg-warning"><?= (int) $f['stock'] ?></span>
-            <?php else: ?><?= (int) $f['stock'] ?><?php endif; ?>
+            <form method="post" class="d-flex gap-1 align-items-center">
+              <?= csrf_field() ?>
+              <input type="hidden" name="id" value="<?= (int) $f['id'] ?>">
+              <input type="hidden" name="back" value="<?= e($back) ?>">
+              <input type="number" name="stock" min="0" max="100000" value="<?= (int) $f['stock'] ?>"
+                     class="form-control form-control-sm <?= (int) $f['stock'] === 0 ? 'border-danger' : '' ?>" style="width:76px" aria-label="Stock">
+              <button name="action" value="stock" class="btn btn-sm btn-outline-secondary" title="Save stock"><i class="bi bi-check-lg"></i></button>
+            </form>
+            <?php if ((int) $f['stock'] === 0): ?><span class="badge text-bg-danger mt-1">Out of stock</span>
+            <?php elseif ((int) $f['stock'] <= 3): ?><span class="badge text-bg-warning mt-1">Low</span><?php endif; ?>
           </td>
           <td><?= $f['same_day_available'] ? '<i class="bi bi-check-lg text-success"></i>' : '—' ?></td>
           <td>

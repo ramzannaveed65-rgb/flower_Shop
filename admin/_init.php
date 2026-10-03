@@ -5,6 +5,7 @@
 // =====================================================
 
 require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../config/notify.php';
 
 session_name('flower_admin');
 session_start();

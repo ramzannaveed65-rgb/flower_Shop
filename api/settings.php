@@ -1,7 +1,8 @@
 <?php
 // =====================================================
 // api/settings.php - Shop settings the app needs at checkout
-// (delivery charges, same-day rules, COD, NayaPay/Easypaisa numbers)
+// (delivery cities and charges, same-day rules, COD, NayaPay/Easypaisa numbers,
+//  Google review link)
 // GET api/settings.php
 // =====================================================
 
@@ -14,6 +15,8 @@ $s = $pdo->query("SELECT setting_key, setting_value FROM settings")
 respond([
     'settings' => [
         'shop_name'                => $s['shop_name'] ?? 'Flower Shop',
+        'delivery_cities'          => delivery_cities($s),
+        'google_review_url'        => $s['google_review_url'] ?? '',
         'standard_delivery_charge' => (float) ($s['standard_delivery_charge'] ?? 0),
         'same_day_delivery_charge' => (float) ($s['same_day_delivery_charge'] ?? 0),
         'same_day_cutoff_time'     => $s['same_day_cutoff_time'] ?? '14:00',
