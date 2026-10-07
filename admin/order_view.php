@@ -92,7 +92,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $pdo->prepare("UPDATE payments SET status = 'rejected', verified_by = ?, admin_note = ? WHERE id = ?")
                     ->execute([$admin['id'], mb_substr($note, 0, 255), $payment['id']]);
                 $pdo->prepare("UPDATE orders SET payment_status = 'rejected' WHERE id = ?")->execute([$id]);
-                flash('Payment rejected. The customer can submit a new one in the app.', 'warning');
+                flash('Payment rejected. The customer can submit a new one on the website.', 'warning');
             }
         } else {
             throw new RuntimeException('Unknown action.');

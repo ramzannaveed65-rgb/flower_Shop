@@ -6,6 +6,7 @@
 
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../config/notify.php';
+require_once __DIR__ . '/../config/migrate.php';
 
 session_name('flower_admin');
 session_start();
@@ -157,10 +158,10 @@ function save_image(array $file, string $prefix, string $subfolder = 'flowers'):
     return "uploads/$subfolder/" . $name;
 }
 
-// Delete an old photo (only files we uploaded into uploads/flowers/ or uploads/events/)
+// Delete an old photo (only files we uploaded ourselves)
 function delete_image(?string $path): void
 {
-    if ($path && (str_starts_with($path, 'uploads/flowers/') || str_starts_with($path, 'uploads/events/'))) {
+    if ($path && preg_match('~^uploads/(flowers|events|categories|site)/[^/]+$~', $path)) {
         @unlink(__DIR__ . '/../' . $path);
     }
 }
@@ -177,3 +178,7 @@ function restock_order(PDO $pdo, int $order_id): void
         $add->execute([(int) $it['quantity'], (int) $it['flower_id']]);
     }
 }
+
+// ---------- Database updates ----------
+// Adds new columns after an update, so no SQL has to be run by hand
+run_migrations($pdo, get_settings($pdo));

@@ -1,0 +1,4 @@
+# Uploaded files are pictures only: never run a script from this folder
+<FilesMatch "\.(php|phtml|phar|pl|py|cgi)$">
+  Require all denied
+</FilesMatch>

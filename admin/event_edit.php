@@ -49,7 +49,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     "INSERT INTO event_packages (event_type_id, name, description, starting_price, image, is_active)
                      VALUES (?, ?, ?, ?, ?, ?)"
                 )->execute($values);
-                flash('Package added. It is now in the app\'s Events tab.');
+                flash('Package added. It is now on the website.');
             } else {
                 $values[] = $id;
                 $pdo->prepare(
@@ -117,7 +117,7 @@ require __DIR__ . '/_header.php';
       </div>
       <div class="form-check form-switch">
         <input class="form-check-input" type="checkbox" name="is_active" id="act" <?= $pkg['is_active'] ? 'checked' : '' ?>>
-        <label class="form-check-label" for="act">Show in the app</label>
+        <label class="form-check-label" for="act">Show on the website</label>
       </div>
     </div>
   </div>

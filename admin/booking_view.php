@@ -47,7 +47,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $pdo->prepare("UPDATE event_bookings SET quoted_price = ?, shop_note = ? WHERE id = ?")
                 ->execute([$price === '' ? null : (float) $price, $note === '' ? null : mb_substr($note, 0, 255), $id]);
-            flash('Saved. The customer can see this in the app.');
+            flash('Saved. The customer can see this on the website.');
         }
     }
     redirect('booking_view.php?id=' . $id);

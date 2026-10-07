@@ -5,3 +5,6 @@ uploads/payments/*
 *.zip
 *.log
 .vscode/
+
+# Database password for the hosting server (never put it on GitHub)
+config/local.php

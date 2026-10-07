@@ -6,6 +6,8 @@
 
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../config/notify.php';
+require_once __DIR__ . '/../config/orders.php';
+require_once __DIR__ . '/../config/bookings.php';
 
 // Every API answer is JSON
 header('Content-Type: application/json; charset=utf-8');
@@ -103,61 +105,6 @@ function get_settings(PDO $pdo): array
                ->fetchAll(PDO::FETCH_KEY_PAIR);
 }
 
-// Full order for the app: order details + items + latest payment
-function format_order(PDO $pdo, array $o): array
-{
-    $stmt = $pdo->prepare(
-        "SELECT oi.flower_id, oi.flower_name, oi.price, oi.quantity, f.image
-         FROM order_items oi
-         LEFT JOIN flowers f ON f.id = oi.flower_id
-         WHERE oi.order_id = ?
-         ORDER BY oi.id"
-    );
-    $stmt->execute([$o['id']]);
-    $items = array_map(fn($i) => [
-        'flower_id'  => $i['flower_id'] !== null ? (int) $i['flower_id'] : null,
-        'name'       => $i['flower_name'],
-        'price'      => (float) $i['price'],
-        'quantity'   => (int) $i['quantity'],
-        'line_total' => (float) $i['price'] * (int) $i['quantity'],
-        'image_url'  => $i['image'] ? BASE_URL . $i['image'] : null,
-    ], $stmt->fetchAll());
-
-    $stmt = $pdo->prepare(
-        "SELECT transaction_id, amount, status, admin_note, created_at
-         FROM payments WHERE order_id = ? ORDER BY id DESC LIMIT 1"
-    );
-    $stmt->execute([$o['id']]);
-    $payment = $stmt->fetch() ?: null;
-
-    return [
-        'id'              => (int) $o['id'],
-        'order_number'    => $o['order_number'],
-        'order_status'    => $o['order_status'],
-        'payment_method'  => $o['payment_method'],
-        'payment_status'  => $o['payment_status'],
-        'delivery_type'   => $o['delivery_type'],
-        'delivery_date'   => $o['delivery_date'],
-        'receiver_name'   => $o['receiver_name'],
-        'receiver_phone'  => $o['receiver_phone'],
-        'address'         => $o['address'],
-        'city'            => $o['city'],
-        'gift_message'    => $o['gift_message'],
-        'subtotal'        => (float) $o['subtotal'],
-        'delivery_charge' => (float) $o['delivery_charge'],
-        'total'           => (float) $o['total'],
-        'created_at'      => $o['created_at'],
-        'items'           => $items,
-        'payment'         => $payment ? [
-            'transaction_id' => $payment['transaction_id'],
-            'amount'         => (float) $payment['amount'],
-            'status'         => $payment['status'],
-            'admin_note'     => $payment['admin_note'],
-            'submitted_at'   => $payment['created_at'],
-        ] : null,
-    ];
-}
-
 // Event decoration package for the app
 function format_package(array $p): array
 {
@@ -172,31 +119,6 @@ function format_package(array $p): array
     ];
 }
 
-// Event booking for the app
-function format_booking(array $b): array
-{
-    return [
-        'id'             => (int) $b['id'],
-        'booking_number' => $b['booking_number'],
-        'status'         => $b['status'],
-        'event_type'     => $b['event_type'],
-        'package_id'     => $b['package_id'] !== null ? (int) $b['package_id'] : null,
-        'package_name'   => $b['package_name'],
-        'starting_price' => $b['starting_price'] !== null ? (float) $b['starting_price'] : null,
-        'quoted_price'   => $b['quoted_price'] !== null ? (float) $b['quoted_price'] : null,
-        'event_date'     => $b['event_date'],
-        'event_time'     => $b['event_time'] ? substr($b['event_time'], 0, 5) : null,   // "18:30"
-        'venue_address'  => $b['venue_address'],
-        'city'           => $b['city'],
-        'guests'         => $b['guests'] !== null ? (int) $b['guests'] : null,
-        'contact_name'   => $b['contact_name'],
-        'contact_phone'  => $b['contact_phone'],
-        'notes'          => $b['notes'],
-        'shop_note'      => $b['shop_note'],
-        'created_at'     => $b['created_at'],
-    ];
-}
-
 // Customer data that is safe to send to the app (never the password)
 function format_customer(array $c): array
 {
@@ -207,15 +129,6 @@ function format_customer(array $c): array
         'address' => $c['address'],
         'city'    => $c['city'],
     ];
-}
-
-// Clean a Pakistani mobile number: "+92 300-1234567" -> "03001234567"
-function normalize_phone(string $phone): string
-{
-    $phone = preg_replace('/[^0-9+]/', '', $phone);
-    if (str_starts_with($phone, '+92')) $phone = '0' . substr($phone, 3);
-    elseif (str_starts_with($phone, '92') && strlen($phone) === 12) $phone = '0' . substr($phone, 2);
-    return $phone;
 }
 
 // Create a new login token for a customer and return it.

@@ -82,7 +82,7 @@ require __DIR__ . '/_header.php';
     <div class="card">
       <div class="table-responsive">
         <table class="table table-hover mb-0">
-          <thead><tr><th>Photo</th><th>Package</th><th>Event</th><th>From</th><th>Bookings</th><th>In app</th><th class="text-end">Actions</th></tr></thead>
+          <thead><tr><th>Photo</th><th>Package</th><th>Event</th><th>From</th><th>Bookings</th><th>On website</th><th class="text-end">Actions</th></tr></thead>
           <tbody>
           <?php if (!$packages): ?>
             <tr><td colspan="7" class="text-center text-muted py-5">No packages yet. Click "Add package".</td></tr>
@@ -131,7 +131,7 @@ require __DIR__ . '/_header.php';
   <div class="col-xl-3">
     <div class="card card-body">
       <h6 class="fw-bold">Event types</h6>
-      <p class="small text-muted">These are the buttons at the top of the Events tab in the app.</p>
+      <p class="small text-muted">These are the filter buttons on the Event decoration page.</p>
       <?php foreach ($types as $t): ?>
         <div class="d-flex gap-1 mb-2 align-items-center">
           <form method="post" class="d-flex gap-1 flex-grow-1">
@@ -144,7 +144,7 @@ require __DIR__ . '/_header.php';
             <?= csrf_field() ?>
             <input type="hidden" name="id" value="<?= (int) $t['id'] ?>">
             <button name="action" value="toggle_type" class="btn btn-sm <?= $t['is_active'] ? 'btn-success' : 'btn-outline-secondary' ?>"
-                    title="<?= $t['is_active'] ? 'Shown in app, click to hide' : 'Hidden, click to show' ?>">
+                    title="<?= $t['is_active'] ? 'Shown on the website, click to hide' : 'Hidden, click to show' ?>">
               <i class="bi <?= $t['is_active'] ? 'bi-eye' : 'bi-eye-slash' ?>"></i>
             </button>
           </form>

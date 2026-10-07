@@ -11,7 +11,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $fid    = (int) ($_POST['id'] ?? 0);
     $action = $_POST['action'] ?? '';
 
-    if ($action === 'toggle') {
+    if ($action === 'feature') {
+        $pdo->prepare("UPDATE flowers SET is_featured = 1 - is_featured WHERE id = ?")->execute([$fid]);
+        flash('Top selling list updated.');
+    } elseif ($action === 'toggle') {
         $pdo->prepare("UPDATE flowers SET is_active = 1 - is_active WHERE id = ?")->execute([$fid]);
         flash('Flower updated.');
     } elseif ($action === 'stock') {
@@ -91,10 +94,10 @@ require __DIR__ . '/_header.php';
 <div class="card">
   <div class="table-responsive">
     <table class="table table-hover mb-0">
-      <thead><tr><th>Photo</th><th>Name</th><th>Category</th><th>Price</th><th>Stock</th><th>Same day</th><th>In app</th><th class="text-end">Actions</th></tr></thead>
+      <thead><tr><th>Photo</th><th>Name</th><th>Category</th><th>Price</th><th>Stock</th><th>Same day</th><th>Top selling</th><th>On website</th><th class="text-end">Actions</th></tr></thead>
       <tbody>
       <?php if (!$flowers): ?>
-        <tr><td colspan="8" class="text-center text-muted py-5">No flowers found</td></tr>
+        <tr><td colspan="9" class="text-center text-muted py-5">No flowers found</td></tr>
       <?php endif; ?>
       <?php foreach ($flowers as $f): ?>
         <tr class="<?= $f['is_active'] ? '' : 'table-secondary text-muted' ?>">
@@ -107,7 +110,9 @@ require __DIR__ . '/_header.php';
           </td>
           <td class="fw-semibold"><?= e($f['name']) ?></td>
           <td><?= e($f['category_name'] ?? '—') ?></td>
-          <td><?= rs($f['price']) ?></td>
+          <td><?= rs($f['price']) ?>
+            <?php if ((float) ($f['old_price'] ?? 0) > (float) $f['price']): ?><br><s class="text-muted small"><?= rs($f['old_price']) ?></s> <span class="badge text-bg-warning">Sale</span><?php endif; ?>
+          </td>
           <td>
             <form method="post" class="d-flex gap-1 align-items-center">
               <?= csrf_field() ?>
@@ -126,8 +131,19 @@ require __DIR__ . '/_header.php';
               <?= csrf_field() ?>
               <input type="hidden" name="id" value="<?= (int) $f['id'] ?>">
               <input type="hidden" name="back" value="<?= e($back) ?>">
+              <button name="action" value="feature" class="btn btn-sm <?= !empty($f['is_featured']) ? 'btn-warning' : 'btn-outline-secondary' ?>"
+                      title="<?= !empty($f['is_featured']) ? 'In Top selling on the home page, click to remove' : 'Click to show in Top selling on the home page' ?>">
+                <i class="bi bi-star<?= !empty($f['is_featured']) ? '-fill' : '' ?>"></i>
+              </button>
+            </form>
+          </td>
+          <td>
+            <form method="post" class="d-inline">
+              <?= csrf_field() ?>
+              <input type="hidden" name="id" value="<?= (int) $f['id'] ?>">
+              <input type="hidden" name="back" value="<?= e($back) ?>">
               <button name="action" value="toggle" class="btn btn-sm <?= $f['is_active'] ? 'btn-success' : 'btn-outline-secondary' ?>"
-                      title="<?= $f['is_active'] ? 'Visible in app, click to hide' : 'Hidden, click to show' ?>">
+                      title="<?= $f['is_active'] ? 'Visible on the website, click to hide' : 'Hidden, click to show' ?>">
                 <?= $f['is_active'] ? '<i class="bi bi-eye"></i> Shown' : '<i class="bi bi-eye-slash"></i> Hidden' ?>
               </button>
             </form>

@@ -14,6 +14,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $errors = [];
         $new = [
             'shop_name'                => trim($_POST['shop_name'] ?? ''),
+            'support_contact'          => trim($_POST['support_contact'] ?? ''),
+            // Website
+            'shop_phone'               => trim($_POST['shop_phone'] ?? ''),
+            'shop_whatsapp'            => trim($_POST['shop_whatsapp'] ?? ''),
+            'shop_email'               => trim($_POST['shop_email'] ?? ''),
+            'shop_address'             => trim($_POST['shop_address'] ?? ''),
+            'opening_hours'            => trim($_POST['opening_hours'] ?? ''),
+            'hero_title'               => trim($_POST['hero_title'] ?? ''),
+            'hero_text'                => trim($_POST['hero_text'] ?? ''),
+            'facebook_url'             => trim($_POST['facebook_url'] ?? ''),
+            'instagram_url'            => trim($_POST['instagram_url'] ?? ''),
             'standard_delivery_charge' => trim($_POST['standard_delivery_charge'] ?? ''),
             'same_day_delivery_charge' => trim($_POST['same_day_delivery_charge'] ?? ''),
             'same_day_cutoff_time'     => trim($_POST['same_day_cutoff_time'] ?? ''),
@@ -54,6 +65,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             && (whatsapp_number($new['whatsapp_alert_phone']) === '' || $new['whatsapp_alert_apikey'] === '')) {
             $errors[] = 'To switch on WhatsApp alerts, enter the WhatsApp number and the API key.';
         }
+        if ($new['shop_email'] !== '' && !filter_var($new['shop_email'], FILTER_VALIDATE_EMAIL)) {
+            $errors[] = 'The shop email does not look right.';
+        }
+        foreach (['facebook_url' => 'Facebook', 'instagram_url' => 'Instagram'] as $k => $label) {
+            if ($new[$k] !== '' && (!preg_match('~^https://~i', $new[$k]) || !filter_var($new[$k], FILTER_VALIDATE_URL))) {
+                $errors[] = "The $label link must start with https://";
+            }
+        }
+
+        // Photos for the website: logo and home page banner
+        $uploads = [];
+        foreach (['site_logo' => 'logo', 'hero_image' => 'banner'] as $k => $prefix) {
+            if (!$errors && isset($_FILES[$k]) && $_FILES[$k]['error'] !== UPLOAD_ERR_NO_FILE) {
+                try {
+                    $uploads[$k] = save_image($_FILES[$k], $prefix, 'site');
+                } catch (RuntimeException $e) {
+                    $errors[] = ucfirst($prefix) . ': ' . $e->getMessage();
+                }
+            }
+        }
+        $old = get_settings($pdo);
+        foreach (['site_logo', 'hero_image'] as $k) {
+            if (isset($_POST['remove_' . $k]) && !isset($uploads[$k])) {
+                $uploads[$k] = '';                       // tick box: remove this photo
+            }
+        }
+
         foreach ($new as $key => $value) {
             if (mb_strlen($value) > 255)                                $errors[] = 'One of the values is too long (max 255 characters).';
         }
@@ -64,7 +102,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             foreach ($new as $key => $value) {
                 save_setting($pdo, $key, $value);
             }
-            flash('Settings saved. The app uses them right away.');
+            foreach ($uploads as $key => $path) {
+                delete_image(($old[$key] ?? '') ?: null);
+                save_setting($pdo, $key, $path);
+            }
+            flash('Settings saved. The website uses them right away.');
         }
     }
 
@@ -79,6 +121,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             flash('Test message sent. Check WhatsApp on ' . whatsapp_number($s['whatsapp_alert_phone'] ?? '') . ' (it can take a minute).');
         } else {
             flash('The test message was not sent: ' . $error, 'danger');
+        }
+    }
+
+    // ----- Change admin login email -----
+    elseif ($action === 'email') {
+        $current = (string) ($_POST['current'] ?? '');
+        $email   = strtolower(trim($_POST['email'] ?? ''));
+
+        $stmt = $pdo->prepare("SELECT password_hash FROM admins WHERE id = ?");
+        $stmt->execute([$admin['id']]);
+        $hash = $stmt->fetchColumn();
+
+        $taken = $pdo->prepare("SELECT COUNT(*) FROM admins WHERE email = ? AND id <> ?");
+        $taken->execute([$email, $admin['id']]);
+
+        if (!password_verify($current, $hash)) {
+            flash('Password is wrong. The email was not changed.', 'danger');
+        } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL) || strlen($email) > 150) {
+            flash('Enter a valid email address.', 'danger');
+        } elseif ((int) $taken->fetchColumn() > 0) {
+            flash('Another admin already uses this email.', 'danger');
+        } else {
+            $pdo->prepare("UPDATE admins SET email = ? WHERE id = ?")->execute([$email, $admin['id']]);
+            flash("Login email changed to $email. Use it the next time you log in.");
         }
     }
 
@@ -119,7 +185,7 @@ require __DIR__ . '/_header.php';
 
 <div class="row g-3">
   <div class="col-lg-8">
-    <form method="post" class="card card-body">
+    <form method="post" enctype="multipart/form-data" class="card card-body">
       <?= csrf_field() ?>
       <input type="hidden" name="action" value="settings">
 
@@ -127,6 +193,72 @@ require __DIR__ . '/_header.php';
       <div class="mb-3">
         <label class="form-label">Shop name</label>
         <input name="shop_name" class="form-control" value="<?= $v('shop_name') ?>" required>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Contact for customers</label>
+        <input name="support_contact" class="form-control" value="<?= $v('support_contact') ?>" placeholder="0300-1234567 (WhatsApp) or shop@example.com">
+        <div class="form-text">Shown on the <a href="../privacy.php" target="_blank">Privacy Policy</a> and
+          <a href="../delete-account.php" target="_blank">Delete account</a> pages (needed for the Play Store).</div>
+      </div>
+
+      <h6 class="fw-bold mt-2">Website</h6>
+      <div class="row">
+        <div class="col-md-6 mb-3">
+          <label class="form-label">Shop phone</label>
+          <input name="shop_phone" class="form-control" value="<?= $v('shop_phone') ?>" placeholder="0300-1234567">
+        </div>
+        <div class="col-md-6 mb-3">
+          <label class="form-label">WhatsApp number for customers</label>
+          <input name="shop_whatsapp" class="form-control" value="<?= $v('shop_whatsapp') ?>" placeholder="0300-1234567">
+          <div class="form-text">Adds the green WhatsApp button to every page.</div>
+        </div>
+        <div class="col-md-6 mb-3">
+          <label class="form-label">Shop email</label>
+          <input name="shop_email" type="email" class="form-control" value="<?= $v('shop_email') ?>">
+        </div>
+        <div class="col-md-6 mb-3">
+          <label class="form-label">Opening hours</label>
+          <input name="opening_hours" class="form-control" value="<?= $v('opening_hours') ?>" placeholder="Every day, 9 AM to 11 PM">
+        </div>
+        <div class="col-12 mb-3">
+          <label class="form-label">Shop address</label>
+          <input name="shop_address" class="form-control" value="<?= $v('shop_address') ?>">
+        </div>
+        <div class="col-md-6 mb-3">
+          <label class="form-label">Facebook page link</label>
+          <input name="facebook_url" type="url" class="form-control" value="<?= $v('facebook_url') ?>" placeholder="https://facebook.com/...">
+        </div>
+        <div class="col-md-6 mb-3">
+          <label class="form-label">Instagram link</label>
+          <input name="instagram_url" type="url" class="form-control" value="<?= $v('instagram_url') ?>" placeholder="https://instagram.com/...">
+        </div>
+        <div class="col-12 mb-3">
+          <label class="form-label">Home page heading</label>
+          <input name="hero_title" class="form-control" value="<?= $v('hero_title') ?>" maxlength="60" placeholder="Fresh flowers, delivered to their door.">
+          <div class="form-text">The big line at the top of the home page. Keep it short. Empty = the line shown here in grey.</div>
+        </div>
+        <div class="col-12 mb-3">
+          <label class="form-label">Text under the heading</label>
+          <input name="hero_text" class="form-control" value="<?= $v('hero_text') ?>" maxlength="200">
+        </div>
+        <?php foreach (['site_logo' => ['Logo', 'Shown at the top of every page instead of the shop name. A wide PNG looks best.'],
+                        'hero_image' => ['Home page banner photo', 'Shown in the arch at the top of the home page. A photo that is taller than it is wide looks best.']] as $k => [$label, $hint]):
+              $has = !empty($s[$k]) && is_file(__DIR__ . '/../' . $s[$k]); ?>
+          <div class="col-md-6 mb-3">
+            <label class="form-label"><?= $label ?></label>
+            <?php if ($has): ?>
+              <div class="d-flex align-items-center gap-2 mb-2">
+                <img src="../<?= e($s[$k]) ?>" alt="" style="height:56px;max-width:140px;object-fit:contain;border-radius:6px;background:#f1f1f1">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" name="remove_<?= $k ?>" id="rm_<?= $k ?>">
+                  <label class="form-check-label small" for="rm_<?= $k ?>">Remove</label>
+                </div>
+              </div>
+            <?php endif; ?>
+            <input type="file" name="<?= $k ?>" accept="image/jpeg,image/png,image/webp" class="form-control">
+            <div class="form-text"><?= $hint ?></div>
+          </div>
+        <?php endforeach; ?>
       </div>
 
       <h6 class="fw-bold mt-2">Delivery</h6>
@@ -184,7 +316,7 @@ require __DIR__ . '/_header.php';
       <div class="mb-3">
         <label class="form-label">Google review link</label>
         <input name="google_review_url" type="url" class="form-control" value="<?= $v('google_review_url') ?>" placeholder="https://g.page/r/XXXXXXXX/review">
-        <div class="form-text">When an order is delivered, the app shows "Rate us on Google" and opens this link.
+        <div class="form-text">When an order is delivered, the order page shows "Rate us on Google" and opens this link.
           Get it from your Google Business Profile: <b>Ask for reviews</b> &rarr; copy the link. Leave empty to hide the button.</div>
       </div>
 
@@ -237,6 +369,15 @@ require __DIR__ . '/_header.php';
       <input type="password" name="new" class="form-control mb-2" placeholder="New password (8+ characters)" required>
       <input type="password" name="confirm" class="form-control mb-3" placeholder="Repeat new password" required>
       <button class="btn btn-outline-dark">Change password</button>
+    </form>
+
+    <form method="post" class="card card-body mt-3">
+      <?= csrf_field() ?>
+      <input type="hidden" name="action" value="email">
+      <h6 class="fw-bold">Change admin login email</h6>
+      <input type="email" name="email" class="form-control mb-2" value="<?= e($admin['email']) ?>" placeholder="New login email" required>
+      <input type="password" name="current" class="form-control mb-3" placeholder="Your password (to confirm)" required>
+      <button class="btn btn-outline-dark">Change email</button>
     </form>
   </div>
 </div>

@@ -59,6 +59,7 @@ function nav_item(string $key, string $href, string $icon, string $label, string
         <?= nav_item('categories', 'categories.php', 'tags', 'Categories', $active ?? '') ?>
         <?= nav_item('settings', 'settings.php', 'gear', 'Settings', $active ?? '') ?>
       </ul>
+      <a href="../" target="_blank" class="btn btn-sm btn-outline-light me-3"><i class="bi bi-box-arrow-up-right"></i> View website</a>
       <span class="navbar-text text-white me-3"><i class="bi bi-person-circle"></i> <?= e($admin['name']) ?></span>
       <a href="logout.php" class="btn btn-sm btn-light">Logout</a>
     </div>

@@ -11,6 +11,7 @@ $id     = (int) ($_GET['id'] ?? 0);
 $flower = [
     'name' => '', 'category_id' => '', 'description' => '', 'price' => '',
     'stock' => '10', 'same_day_available' => 1, 'is_active' => 1, 'image' => '',
+    'old_price' => '', 'is_featured' => 0,
 ];
 
 if ($id > 0) {
@@ -34,10 +35,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $flower['stock']              = trim($_POST['stock'] ?? '');
     $flower['same_day_available'] = isset($_POST['same_day_available']) ? 1 : 0;
     $flower['is_active']          = isset($_POST['is_active']) ? 1 : 0;
+    $flower['old_price']          = trim($_POST['old_price'] ?? '');
+    $flower['is_featured']        = isset($_POST['is_featured']) ? 1 : 0;
 
     if (mb_strlen($flower['name']) < 2)                                     $errors[] = 'Enter the flower name.';
     if (!is_numeric($flower['price']) || (float) $flower['price'] <= 0)     $errors[] = 'Enter a price greater than 0.';
     if (!ctype_digit($flower['stock']))                                     $errors[] = 'Stock must be a whole number (0 or more).';
+    if ($flower['old_price'] !== '' && (!is_numeric($flower['old_price']) || (float) $flower['old_price'] <= (float) $flower['price'])) {
+        $errors[] = 'The price before sale must be higher than the price. Leave it empty if the flower is not on sale.';
+    }
 
     $has_new_photo = isset($_FILES['image']) && $_FILES['image']['error'] !== UPLOAD_ERR_NO_FILE;
     if ($id === 0 && !$has_new_photo) {
@@ -55,19 +61,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $flower['category_id'], $flower['name'], $flower['description'],
                 (float) $flower['price'], (int) $flower['stock'],
                 $flower['same_day_available'], $flower['is_active'], $flower['image'],
+                $flower['old_price'] !== '' ? (float) $flower['old_price'] : null, $flower['is_featured'],
             ];
 
             if ($id === 0) {
                 $pdo->prepare(
-                    "INSERT INTO flowers (category_id, name, description, price, stock, same_day_available, is_active, image)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+                    "INSERT INTO flowers (category_id, name, description, price, stock, same_day_available, is_active, image, old_price, is_featured)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
                 )->execute($values);
-                flash('Flower added. It is now in the app.');
+                flash('Flower added. It is now on the website.');
             } else {
                 $values[] = $id;
                 $pdo->prepare(
                     "UPDATE flowers SET category_id = ?, name = ?, description = ?, price = ?, stock = ?,
-                            same_day_available = ?, is_active = ?, image = ? WHERE id = ?"
+                            same_day_available = ?, is_active = ?, image = ?, old_price = ?, is_featured = ? WHERE id = ?"
                 )->execute($values);
                 if ($has_new_photo && $old_image !== $flower['image']) {
                     delete_image($old_image);
@@ -112,10 +119,15 @@ require __DIR__ . '/_header.php';
           <input name="price" type="number" step="1" min="1" class="form-control" value="<?= e($flower['price'] !== '' ? (float) $flower['price'] : '') ?>" required>
         </div>
         <div class="col-md-4 mb-3">
+          <label class="form-label">Price before sale (Rs)</label>
+          <input name="old_price" type="number" step="1" min="1" class="form-control" value="<?= e(($flower['old_price'] ?? '') !== '' && $flower['old_price'] !== null ? (float) $flower['old_price'] : '') ?>" placeholder="Empty = not on sale">
+          <div class="form-text">Shown crossed out next to the price.</div>
+        </div>
+        <div class="col-md-4 mb-3">
           <label class="form-label">Stock *</label>
           <input name="stock" type="number" min="0" step="1" class="form-control" value="<?= e($flower['stock']) ?>" required>
         </div>
-        <div class="col-md-4 mb-3">
+        <div class="col-md-12 mb-3">
           <label class="form-label">Category</label>
           <select name="category_id" class="form-select">
             <option value="0">— None —</option>
@@ -133,9 +145,13 @@ require __DIR__ . '/_header.php';
         <input class="form-check-input" type="checkbox" name="same_day_available" id="sd" <?= $flower['same_day_available'] ? 'checked' : '' ?>>
         <label class="form-check-label" for="sd">Available for same-day delivery</label>
       </div>
+      <div class="form-check form-switch mb-2">
+        <input class="form-check-input" type="checkbox" name="is_featured" id="feat" <?= !empty($flower['is_featured']) ? 'checked' : '' ?>>
+        <label class="form-check-label" for="feat">Show in "Top selling" on the home page</label>
+      </div>
       <div class="form-check form-switch">
         <input class="form-check-input" type="checkbox" name="is_active" id="act" <?= $flower['is_active'] ? 'checked' : '' ?>>
-        <label class="form-check-label" for="act">Show in the app</label>
+        <label class="form-check-label" for="act">Show on the website</label>
       </div>
     </div>
   </div>
@@ -151,7 +167,7 @@ require __DIR__ . '/_header.php';
       <?php endif; ?>
       <input type="file" name="image" accept="image/jpeg,image/png,image/webp" class="form-control"
              onchange="if(this.files[0]){var p=document.getElementById('preview');p.src=window.URL.createObjectURL(this.files[0]);p.classList.remove('d-none');var n=document.getElementById('nophoto');if(n)n.remove();}">
-      <div class="form-text">JPG, PNG or WEBP, max 5 MB. A square photo looks best in the app.</div>
+      <div class="form-text">JPG, PNG or WEBP, max 5 MB. A square photo looks best.</div>
     </div>
     <button class="btn btn-pink w-100 mt-3 py-2"><i class="bi bi-check-lg"></i> <?= $id ? 'Save changes' : 'Add flower' ?></button>
   </div>

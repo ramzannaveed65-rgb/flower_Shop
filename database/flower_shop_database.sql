@@ -39,7 +39,8 @@ CREATE TABLE customers (
 CREATE TABLE categories (
   id         INT AUTO_INCREMENT PRIMARY KEY,
   name       VARCHAR(80) NOT NULL UNIQUE,
-  is_active  TINYINT(1) NOT NULL DEFAULT 1
+  is_active  TINYINT(1) NOT NULL DEFAULT 1,
+  image      VARCHAR(255) NULL                  -- photo for the category tile on the home page
 );
 
 -- -----------------------------------------------------
@@ -56,6 +57,8 @@ CREATE TABLE flowers (
   same_day_available TINYINT(1) NOT NULL DEFAULT 1, -- some items may need pre-order
   is_active    TINYINT(1) NOT NULL DEFAULT 1,    -- hide without deleting
   created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  old_price    DECIMAL(10,2) NULL,               -- price before a sale (shown crossed out)
+  is_featured  TINYINT(1) NOT NULL DEFAULT 0,    -- show in Top selling on the home page
   FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL
 );
 
@@ -210,6 +213,7 @@ CREATE TABLE event_bookings (
 
 INSERT INTO settings (setting_key, setting_value) VALUES
   ('shop_name',            'Flower Shop'),
+  ('schema_version',       '1'),               -- used by config/migrate.php, do not change
   ('standard_delivery_charge', '150'),
   ('same_day_delivery_charge', '350'),
   ('same_day_cutoff_time', '14:00'),          -- same-day only if ordered before 2 PM

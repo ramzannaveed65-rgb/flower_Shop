@@ -1,0 +1,2 @@
+# Nobody may open the config files in a browser (they hold the database password)
+Require all denied

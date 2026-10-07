@@ -49,7 +49,7 @@ require __DIR__ . '/_header.php';
 <div class="alert alert-light border small">
   <b>How it works:</b> a customer chooses a package (or a custom request) and sends the event date and venue.
   Call them, agree the final price, then mark the booking as <b>Contacted</b> → <b>Confirmed</b> → <b>Completed</b>.
-  The price and note you save are shown to the customer in the app.
+  The price and note you save are shown to the customer on the website.
 </div>
 
 <form class="card card-body mb-3" method="get">
